@@ -1,4 +1,4 @@
-from screen_capture import capture_screen
+from screen_capture import capture_full_page_screenshots, stitch_screenshots
 from bio_parser import extract_text_from_image, match_rules, load_rules
 from message_sender import send_message
 from humanizer import wait_random
@@ -15,10 +15,20 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(m
 
 def run_bot():
     logging.info('Capturing screen...')
-    image_path = capture_screen()
-    logging.info(f'Screen captured: {image_path}')
+    screenshot_list = capture_full_page_screenshots(
+        output_prefix='full_page',
+        max_scrolls=7,
+        scroll_delay=2.0
+    )
+
+    print("Screenshots captured:")
+    for screenshot in screenshot_list:
+        print(f"- {screenshot}")
+
+    stitched_file = stitch_screenshots(screenshot_list, 'complete_page.png')
+    # logging.info(f'Screen captured: {image_path}')
     logging.info('Extracting bio text from image...')
-    bio_text = extract_text_from_image(image_path)
+    bio_text = extract_text_from_image(stitched_file)
     logging.info(f'Extracted bio text: {bio_text}')
     message = None
 
