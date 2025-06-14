@@ -158,7 +158,7 @@ def swipe_screen(x1=540, y1=1600, x2=540, y2=400, duration_ms=500):
     
 # --- Main Functions (keep find_all_prompts_and_likes_with_scrolling as is) ---
 
-def find_all_prompts_and_likes_with_scrolling(max_swipes=30):
+def find_all_prompts_and_likes_with_scrolling(max_swipes=8):
     """
     Scans the entire UI by scrolling, extracting all unique prompts and their 'Like' buttons.
 
@@ -170,6 +170,14 @@ def find_all_prompts_and_likes_with_scrolling(max_swipes=30):
               and the 'like_coords' (a tuple of x, y).
     """
     logging.info("--- Starting full-page scan with scrolling ---")
+
+    logging.info('Scrolling to the top before starting full page screenshot capture...')
+    # Scroll to the top by sending multiple swipe-up gestures
+    for _ in range(8):
+        # Swipe up: start_y < end_y (move from lower to upper part of the screen)
+        os.system('adb shell input swipe 500 800 500 1500 300')
+        time.sleep(0.5)
+    logging.info('Reached top of the page.')
     
     all_found_prompts = {}
     last_content = ""
