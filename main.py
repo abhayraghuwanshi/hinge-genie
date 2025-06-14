@@ -1,11 +1,15 @@
-from find_button_corrdinates import find_all_prompts_and_likes_with_scrolling
-from screen_capture import capture_full_page_screenshots, stitch_screenshots
+from find_button_corrdinates import find_and_interact_with_buttons
+from screen_capture import capture_full_page_screenshots, screen_to_top, stitch_screenshots
 from bio_parser import extract_text_from_image, match_rules, load_rules
 from message_sender import send_message
 from humanizer import wait_random
 from gpt_generator import generate_gpt_message
-import yaml
 import logging
+import os
+import xml.etree.ElementTree as ElementTree
+from PIL import Image
+import numpy as np
+import yaml
 
 with open("config.yaml") as f:
     CONFIG = yaml.safe_load(f)
@@ -16,8 +20,8 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(m
 
 def run_bot():
     logging.info('Capturing screen...')
-
-    # scrooll and capture the screen into a single image
+    screen_to_top()
+    # scroll and capture the screen into a single image
     screenshot_list = capture_full_page_screenshots(
         output_prefix='full_page',
         max_scrolls=7,
@@ -30,47 +34,51 @@ def run_bot():
 
     stitched_file = stitch_screenshots(screenshot_list, 'complete_page.png')
 
-    # now extract all the promt data from this -> using ocr
+    # now extract all the prompt data from this -> using ocr
     logging.info('Extracting bio text from image...')
     bio_text = extract_text_from_image(stitched_file)
     logging.info(f'Extracted bio text: {bio_text}')
     message = None
 
-    # clean bio text from the model
-
-    # now we have all the data, generate promt from the the text extract
-    message = None
-
+    # now we have all the data, generate prompt from the text extract
     if CONFIG["gpt"]["enabled"]:
         logging.info('Generating message using GPT...')
         message = generate_gpt_message(bio_text)
         logging.info(f'GPT message: {message}')
 
-    # Finalise thebest promt to answer from the list of promts
+    # Finalize the best prompt to answer from the list of prompts
     if not message:
         logging.info('Trying to match rules...')
         message = match_rules(bio_text, rules)
         logging.info(f'Rule-based message: {message}')
 
-    # Autoscroll and find that promt:
-    # how ? take screenshot find if there is a button to reply (images of button matching).
-    # find the promt that in screen. 
-    # find the coordinate of the reply button and if the reply promt is making sense
-    # type the message in the input field 
-    # find the cooridnate of the send button by taking screenshot and analysing the button coordinate
     if message:
         logging.info(f"[REQ FOUND] Sending message: {message}")
         wait_random(2, 4)
-        send_message(x=320, y=890, message=message)
-
-
-    # Do the house keeping of the images
-
-
-
-  
+        screen_to_top()
+        # First find and click the reply button, passing the bio text to match
+        success, button_coords = find_and_interact_with_buttons(message)
+        if success and button_coords:
+            x, y = button_coords
+            # Wait for input field to be ready
+            wait_random(1, 2)
+            # Send the message
+            send_message(x=x, y=y, message=message)
+        else:
+            logging.warning("Could not find matching reply button. Skipping message send.")
     else:
         logging.info('No suitable message found. Skipping.')
+
+    # Clean up temporary files
+    for screenshot in screenshot_list:
+        try:
+            os.remove(screenshot)
+        except:
+            pass
+    try:
+        os.remove(stitched_file)
+    except:
+        pass
 
 if __name__ == "__main__":
     while True:

@@ -42,14 +42,6 @@ def capture_full_page_screenshots(output_prefix='page_screenshot', max_scrolls=7
     Returns:
         list: List of screenshot file paths
     """
-    logging.info('Scrolling to the top before starting full page screenshot capture...')
-    # Scroll to the top by sending multiple swipe-up gestures
-    for _ in range(8):
-        # Swipe up: start_y < end_y (move from lower to upper part of the screen)
-        os.system('adb shell input swipe 500 800 500 1500 300')
-        time.sleep(0.5)
-    logging.info('Reached top of the page.')
-
     """
     Scrolls through the entire page and captures screenshots at each step.
 
@@ -141,3 +133,11 @@ def stitch_screenshots(screenshot_files, output_path='stitched_image.png', overl
         logging.error(f"Error stitching images: {e}")
         return None
 
+def screen_to_top():
+    logging.info('Scrolling to the top before starting full page screenshot capture...')
+    # Scroll to the top by sending multiple swipe-up gestures
+    for _ in range(8):
+        # Swipe up: start_y < end_y (move from lower to upper part of the screen)
+        os.system('adb shell input swipe 500 800 500 1500 300')
+        time.sleep(0.5)
+    logging.info('Reached top of the page.')

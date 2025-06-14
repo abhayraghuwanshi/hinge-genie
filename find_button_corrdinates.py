@@ -1,226 +1,265 @@
-import re
-import subprocess
-import time
-from xml.etree import ElementTree
 import logging
-from interaction_manager import save_dump_to_history
+import numpy as np
+import cv2
+import time
+import hashlib
 import os
-# Configuration
-DUMP_FILE = "ui.xml"
-# Setup basic loggingaa
+from PIL import Image
+import pyautogui  # Add this import for mouse control
+import pygetwindow as gw
+import pytesseract
+import requests
+from humanizer import wait_random
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
-def adb_shell(cmd):
-    """Executes an adb shell command and returns the output."""
-    try:
-        return subprocess.run(["adb", "shell"] + cmd.split(), capture_output=True, text=True, check=True).stdout.strip()
-    except subprocess.CalledProcessError as e:
-        logging.error(f"ADB command failed: {e.stderr}")
-        return None
+# Replace with your emulator window title (e.g., "BlueStacks", "Nox", "Android Emulator", etc.)
+window_title = "BlueStacks App Player"  # Change this to match your emulator's window title
 
-def take_ui_dump():
-    """Dumps the current UI, saves it to history, and returns the local file path."""
-    logging.info("[*] Taking UIAutomator dump...")
-    adb_shell("uiautomator dump /sdcard/ui.xml")
-    subprocess.run(["adb", "pull", "/sdcard/ui.xml", DUMP_FILE], capture_output=True)
+# Find the window
+win = None
+for w in gw.getAllWindows():
+    if window_title.lower() in w.title.lower():
+        win = w
+        break
+
+if win is None:
+    raise Exception("Emulator window not found!")
+
+offset_x, offset_y = 685, 41
+
+def find_and_interact_with_buttons(message=None):
+    """
+    Analyzes screenshots while scrolling to find buttons and interact with them.
+    Only clicks the like button if the message is suitable for the prompt text found near the button.
+    Optimized for OnePlus 10 emulated device (1080x2400 resolution).
     
-    if os.path.exists(DUMP_FILE):
-        # Save a copy to the history/dumps folder
-        save_dump_to_history(DUMP_FILE)
-        return DUMP_FILE
-    else:
-        logging.error("UI dump file not found after pull.")
-        return None
-
-def parse_bounds(bounds_str):
-    """Parses a bounds string like '[x1,y1][x2,y2]' into center (x, y) coordinates."""
-    match = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds_str)
-    if match:
-        x1, y1, x2, y2 = map(int, match.groups())
-        return (x1 + x2) // 2, (y1 + y2) // 2
-    return None, None
-
-def tap_screen(x, y):
-    """Taps the screen at the given coordinates."""
-    logging.info(f"[+] Tapping at ({x}, {y})...")
-    adb_shell(f"input tap {x} {y}")
-
-def find_and_tap_skip_button():
-    """Finds and taps the button to skip the current profile."""
-    logging.info("Attempting to find and tap the 'Skip' button.")
-    dump_path = take_ui_dump()
-    if not dump_path: return False
-
-    try:
-        tree = ElementTree.parse(dump_path)
-        root = tree.getroot()
+    Args:
+        screenshot_path: Path to the initial screenshot
+        target_prompt_text: The prompt text we want to reply to (optional)
+        message: The message to send (used to decide if button is suitable)
+    
+    Returns:
+        tuple: (success, button_coords) where success is bool and button_coords is (x,y) or None
+    """
+    logging.info('Starting button search with scrolling...')
+    
+    # OnePlus 10 specific parameters
+    SCREEN_WIDTH = 1080
+    SCREEN_HEIGHT = 2400
+    SCROLL_START_Y = 2000  # Start scroll from near bottom
+    SCROLL_END_Y = 1000    # End scroll near top
+    SCROLL_DURATION = 300  # ms
+    SCROLL_DELAY = 1.5     # seconds between scrolls
+    
+    # Load the reply button template image
+    template_path = "LikeImagePromt.png"
+    if not os.path.exists(template_path):
+        logging.error(f"Reply button template image not found at {template_path}")
+        return False, None
         
-        # --- MODIFIED PART ---
-        # Manually iterate to find the correct node instead of using complex XPath
-        skip_node = None
-        for node in root.iter('node'):
-            if (node.attrib.get('class') == 'android.widget.Button' and
-                    node.attrib.get('content-desc', '').startswith('Skip')):
-                skip_node = node
-                break  # Found the node, no need to search further
-        # --- END OF MODIFIED PART ---
+    template = cv2.imread(template_path)
+    if template is None:
+        logging.error("Failed to load reply button template")
+        return False, None
+        
+    # Convert template to grayscale
+    template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    template_h, template_w = template_gray.shape
+    
+    # Scroll and search parameters
+    max_scrolls = 15  # Increased for taller screen
+    scroll_count = 0
+    last_screenshot_hash = None
+    same_screenshot_count = 0
+    max_same_screenshots = 3  # Stop if we see the same content 3 times
+    
+    def get_screenshot_hash(image_path):
+        """Get hash of image to detect duplicate screenshots"""
+        try:
+            with open(image_path, 'rb') as f:
+                return hashlib.md5(f.read()).hexdigest()
+        except Exception as e:
+            logging.error(f"Error hashing image {image_path}: {e}")
+            return None
+    
+    def scroll_screen():
+        """Scroll the screen with OnePlus 10 specific parameters"""
+        os.system(f'adb shell input swipe 500 1500 500 800 300')
+        time.sleep(SCROLL_DELAY)
+    
+    def take_screenshot(filename):
+        """Take a screenshot using ADB"""
+        os.system(f"adb exec-out screencap -p > {filename}")
+        time.sleep(0.5)  # Wait for screenshot to be saved
 
-        if skip_node is not None:
-            logging.info(f"Found skip button with description: '{skip_node.attrib.get('content-desc')}'")
-            bounds = skip_node.attrib.get("bounds")
-            x, y = parse_bounds(bounds)
-            if x is not None and y is not None:
-                tap_screen(x, y)
-                logging.info("Successfully tapped the 'Skip' button.")
+    
+    def click_button(x, y):
+        """Use ADB to tap at given screen coordinates."""
+        try:
+            adb_x = int(x)
+            adb_y = int(y)
+            result = os.system(f"adb shell input tap {adb_x} {adb_y}")
+            if result == 0:
+                logging.info(f"Tapped at ({adb_x}, {adb_y}) using ADB")
                 return True
             else:
-                logging.error("Found skip button but could not parse its bounds.")
-        else:
-            logging.warning("Could not find the 'Skip' button on the screen.")
-
-    except ElementTree.ParseError:
-        logging.error("Failed to parse UI dump for skip button.")
+                logging.error("ADB tap command failed.")
+                return False
+        except Exception as e:
+            logging.error(f"Error during adb tap: {e}")
+            return False
     
-    return False
-
-def extract_profile_name(dump_file=DUMP_FILE):
-    """Extracts the profile's name from the UI dump."""
-    try:
-        tree = ElementTree.parse(dump_file)
-        root = tree.getroot()
-        # From the UI dump, the user's name is in a TextView that is uniquely focused
-        name_node = root.find(".//*[@focusable='true'][@focused='true']")
-        if name_node is not None and name_node.attrib.get("text"):
-            name = name_node.attrib.get("text", "").strip()
-            if name:
-                logging.info(f"Extracted profile name: '{name}'")
-                return name
-    except (FileNotFoundError, ElementTree.ParseError):
-        logging.error(f"Could not read or parse dump file: {dump_file}")
-
-    logging.warning("Could not extract profile name.")
-    return None
-
-def get_clickable_button_coordinates(dump_file=DUMP_FILE):
-    """
-    Extracts the coordinates of all clickable buttons from the UI dump.
-
-    Args:
-        dump_file (str): Path to the UI XML dump file.
-
-    Returns:
-        list of dict: Each dict contains 'class', 'content-desc', 'text', and 'coords' (tuple of x, y).
-    """
-    try:
-        tree = ElementTree.parse(dump_file)
-    except (FileNotFoundError, ElementTree.ParseError):
-        logging.error("Could not parse XML file.")
-        return []
-
-    root = tree.getroot()
-    buttons = []
-
-    for node in root.iter("node"):
-        clazz = node.attrib.get("class", "")
-        clickable = node.attrib.get("clickable", "false")
-        if clazz == "android.widget.Button" and clickable == "true":
-            bounds = node.attrib.get("bounds")
-            coords = parse_bounds(bounds)
-            button_info = {
-                "class": clazz,
-                "content-desc": node.attrib.get("content-desc", ""),
-                "text": node.attrib.get("text", ""),
-                "coords": coords
-            }
-            buttons.append(button_info)
-
-    return buttons
-
-
-def swipe_screen(x1=540, y1=1600, x2=540, y2=400, duration_ms=500):
-    """
-    Performs a swipe gesture to scroll the screen down.
-
-    Default values (x1=540, y1=1600, x2=540, y2=400) are set for a typical 1080x1920 screen,
-    which is common for Android emulators like Bluestacks. If your Bluestacks instance uses
-    a different resolution, you may need to adjust these values accordingly.
-
-    Args:
-        x1, y1: Start coordinates of the swipe.
-        x2, y2: End coordinates of the swipe.
-        duration_ms: Duration of the swipe in milliseconds.
-    """
-    logging.info(f"[*] Swiping screen from ({x1}, {y1}) to ({x2}, {y2}) over {duration_ms}ms...")
-    cmd = f"input swipe {x1} {y1} {x2} {y2} {duration_ms}"
-    adb_shell(cmd)
-    time.sleep(2)  # Wait for the UI to settle after swipe
-
     
-# --- Main Functions (keep find_all_prompts_and_likes_with_scrolling as is) ---
-
-def find_all_prompts_and_likes_with_scrolling(max_swipes=8):
-    """
-    Scans the entire UI by scrolling, extracting all unique prompts and their 'Like' buttons.
-
-    Args:
-        max_swipes (int): A safeguard to prevent infinite scrolling.
-
-    Returns:
-        list: A list of dictionaries, each containing the 'prompt_text'
-              and the 'like_coords' (a tuple of x, y).
-    """
-    logging.info("--- Starting full-page scan with scrolling ---")
-
-    logging.info('Scrolling to the top before starting full page screenshot capture...')
-    # Scroll to the top by sending multiple swipe-up gestures
-    for _ in range(8):
-        # Swipe up: start_y < end_y (move from lower to upper part of the screen)
-        os.system('adb shell input swipe 500 800 500 1500 300')
-        time.sleep(0.5)
-    logging.info('Reached top of the page.')
+    def is_message_suitable(prompt_text, message, model="mistral"):
+        """Ask Ollama if the message is a good reply to the prompt text."""
+        system_prompt = (
+            f'Prompt: "{prompt_text.strip()}"\n'
+            f'Message: "{message.strip()}"\n'
+            'Is this message a good, relevant, and contextually appropriate reply to the prompt? Reply with only "yes" or "no".'
+        )
+        try:
+            res = requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": model, "prompt": system_prompt},
+                timeout=10
+            )
+            res.raise_for_status()
+            response = res.text.strip().lower()
+            return "yes" in response
+        except Exception as e:
+            logging.error(f"Ollama API error: {e}")
+            return False
     
-    all_found_prompts = {}
-    last_content = ""
-    same_content_count = 0
-    max_same_content = 2  # If we see the same content 2 times in a row, assume we're done
-
-    for i in range(max_swipes):
-        logging.info(f"--- Scan Iteration {i+1}/{max_swipes} ---")
+    def find_best_match(screenshot_gray, template_gray):
+        """Find the best match using multiple template matching methods"""
+        methods = [
+            cv2.TM_CCOEFF_NORMED,
+            cv2.TM_CCORR_NORMED,
+            cv2.TM_SQDIFF_NORMED
+        ]
         
-        current_content = take_ui_dump()
-
-        if not current_content:
-            logging.info("[✓] No UI dump content. Stopping scan.")
-            break
-
-        # If the UI content hasn't changed, try swiping a few more times before giving up.
-        if current_content == last_content:
-            same_content_count += 1
-            logging.info(f"[!] UI content unchanged ({same_content_count}/{max_same_content}).")
-            if same_content_count < max_same_content:
-                logging.info("[*] UI unchanged, will try swiping again to ensure we've reached the end.")
-                swipe_screen()
-                continue
+        best_confidence = 0
+        best_location = None
+        
+        for method in methods:
+            result = cv2.matchTemplate(screenshot_gray, template_gray, method)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            
+            # For TM_SQDIFF_NORMED, the best match is the minimum value
+            if method == cv2.TM_SQDIFF_NORMED:
+                confidence = 1 - min_val  # Convert to similarity score
+                location = min_loc
             else:
-                # Instead of breaking immediately, try a few more swipes to ensure we reach the true end
-                logging.info("[*] UI unchanged after several checks, but will attempt a few more swipes to ensure end.")
-                for extra_swipe in range(3):
-                    swipe_screen()
-                    time.sleep(1)
-                    current_content = take_ui_dump()
-                    if current_content != last_content:
-                        same_content_count = 0
-                        break
-                else:
-                    logging.info("[✓] Reached the end of the page or UI is static after extra swipes.")
+                confidence = max_val
+                location = max_loc
+                
+            if confidence > best_confidence:
+                best_confidence = confidence
+                best_location = location
+                
+        return best_confidence, best_location
+    
+    
+    while scroll_count < max_scrolls:
+        logging.info(f"Scroll attempt {scroll_count + 1}/{max_scrolls}")
+        
+        try:
+            # Take a new screenshot after each scroll
+            if scroll_count > 0:
+                scroll_screen()
+            
+            current_screenshot = f'scroll_check_{scroll_count}.png'
+            take_screenshot(current_screenshot)
+
+            logging.info(Image.open("screen.png").size)  # Should return (1080, 2400)
+
+            # Check if we've reached the end of content
+            current_hash = get_screenshot_hash(current_screenshot)
+            if current_hash == last_screenshot_hash:
+                same_screenshot_count += 1
+                logging.info(f"Same content detected ({same_screenshot_count}/{max_same_screenshots})")
+                if same_screenshot_count >= max_same_screenshots:
+                    logging.info("Reached end of content")
                     break
-        else:
-            same_content_count = 0
+            else:
+                same_screenshot_count = 0
+                last_screenshot_hash = current_hash
+            
+            # Load and process the screenshot
+            screenshot = Image.open(current_screenshot)
+            screenshot_np = np.array(screenshot)
+            screenshot_gray = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2GRAY)
+            
+            # Find best match using multiple methods
+            confidence, location = find_best_match(screenshot_gray, template_gray)
+            
+            # Lower threshold since we're using multiple matching methods
+            if confidence > 0.45:  # Adjusted threshold based on observed values
+                # Get the center of the matched template
+                x = location[0] + template_w//2
+                y = location[1] + template_h//2
+                
+                logging.info(f"Found reply button at ({x}, {y}) with confidence {confidence:.2f}")
+                
+                # Extract text near the button
+                crop_margin = 100  # pixels around the button
+                left = max(location[0] - crop_margin, 0)
+                top = max(location[1] - crop_margin, 0)
+                right = min(location[0] + template_w + crop_margin, screenshot_np.shape[1])
+                bottom = min(location[1] + template_h + crop_margin, screenshot_np.shape[0])
+                region = screenshot_np[top:bottom, left:right]
+                region_pil = Image.fromarray(region)
+                prompt_text = pytesseract.image_to_string(region_pil)
+                logging.info(f"Prompt text near button: {prompt_text.strip()}")
+                
+                # Decide if this is the right button based on the message and prompt text
+                if message and prompt_text:
+                    logging.info("Asking Ollama if this is a good reply...")
+                    if is_message_suitable(prompt_text, message):
+                        logging.info("Ollama says this is a good reply. Clicking button.")
+                        if click_button(x, y):
+                            logging.info("Successfully clicked button")
+                            try:
+                                os.remove(current_screenshot)
+                            except:
+                                pass
+                            return True, (x, y)
+                        else:
+                            logging.warning("Failed to click button, trying again...")
+                            time.sleep(0.5)
+                            if click_button(x, y):
+                                logging.info("Successfully clicked button on second attempt")
+                                try:
+                                    os.remove(current_screenshot)
+                                except:
+                                    pass
+                                return True, (x, y)
+                    else:
+                        logging.info("Ollama says this is NOT a good reply. Scrolling...")
+            
+            # Clean up temporary screenshot
+            try:
+                os.remove(current_screenshot)
+            except:
+                pass
+            
+            logging.info(f"No suitable button found in current view (confidence: {confidence:.2f})")
+            scroll_count += 1
+            
+        except Exception as e:
+            logging.error(f"Error during scroll attempt {scroll_count + 1}: {e}")
+            # Clean up temporary screenshot
+            try:
+                os.remove(current_screenshot)
+            except:
+                pass
+            scroll_count += 1
+    
+    logging.warning(f"Could not find suitable reply button after {scroll_count} scrolls")
+    return False, None
 
-        last_content = current_content
-        prompts_on_screen = get_clickable_button_coordinates(DUMP_FILE)
-        
-        
-        logging.info(f"[+] Found {prompts_on_screen} new prompts on this screen.")
 
-    return list(all_found_prompts.values())
+if __name__ == "__main__":
+    while True:
+        find_and_interact_with_buttons("Hey there! I couldn't help but notice your love for Bob's place – we must have similar taste in comfort food and cozy spots! When I'm looking to unwind and feel a bit more like myself, it's usually the first place on my list too. Maybe we can plan a double date with our friends sometime? 🍔😉 Let's see if Bob's can work its magic on us both.")
+        wait_random(15, 30)
