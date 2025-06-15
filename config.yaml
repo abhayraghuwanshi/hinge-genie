@@ -1,15 +1,10 @@
 gpt:
   model: "mistral"
   enabled: true
-<<<<<<< HEAD
   target_age: 23-26
   target_relationship: "Short to long"
   style: "playful"
   personality: "outgoing and adventurous"
-=======
-  style: "flirty"
-  personality: "friendly and confident"
->>>>>>> master
   openai_api_key: ""
 rules: []
 

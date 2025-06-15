@@ -1,9 +1,10 @@
-from find_button_corrdinates import find_and_interact_with_buttons
-from screen_capture import capture_full_page_screenshots, screen_to_top, stitch_screenshots
-from bio_parser import extract_text_from_image, match_rules, load_rules
-from message_sender import send_message
-from humanizer import wait_random
-from gpt_generator import generate_gpt_message
+from utils.find_button_corrdinates import find_and_interact_with_buttons
+from utils.screen_capture import capture_full_page_screenshots, screen_to_top, stitch_screenshots
+from utils.bio_parser import extract_text_from_image, match_rules, load_rules
+from utils.message_sender import send_message
+from utils.humanizer import wait_random
+from utils.gpt_generator import generate_gpt_message
+from utils.interaction_manager import setup_history_folders, save_profile_and_message
 import logging
 import os
 import xml.etree.ElementTree as ElementTree
@@ -63,6 +64,8 @@ def run_bot():
             wait_random(1, 2)
             # Send the message
             send_message(message=message)
+            # Save profile and message to history
+            save_profile_and_message(stitched_file, message)
         else:
             logging.warning("Could not find matching reply button. Skipping message send.")
     else:
@@ -74,13 +77,12 @@ def run_bot():
             os.remove(screenshot)
         except:
             pass
-    try:
-        os.remove(stitched_file)
-    except:
-        pass
+    # Keep the stitched file for reference
+    logging.info(f"Kept stitched profile image: {stitched_file}")
 
 if __name__ == "__main__":
     # Ensure all necessary folders exist before starting the loop
+    setup_history_folders()
     
     logging.info("Bot starting up. Press Ctrl+C to stop.")
     while True:
