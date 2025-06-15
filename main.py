@@ -80,6 +80,10 @@ def run_bot():
         pass
 
 if __name__ == "__main__":
+    # Ensure all necessary folders exist before starting the loop
+    
+    logging.info("Bot starting up. Press Ctrl+C to stop.")
     while True:
         run_bot()
-        wait_random(15, 30)
+        wait_duration = wait_random(60, 90)
+        logging.info(f"--- Cycle complete. Waiting for {wait_duration} seconds. ---")
