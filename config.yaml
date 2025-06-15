@@ -3,8 +3,7 @@ gpt:
   enabled: true
   style: "flirty"
   personality: "friendly and confident"
-  openai_api_key: "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"
-
+  openai_api_key: ""
 rules: []
 
 delays:
