@@ -1,80 +1,86 @@
-import logging
+from find_button_corrdinates import find_and_interact_with_buttons
+from screen_capture import capture_full_page_screenshots, screen_to_top, stitch_screenshots
+from bio_parser import extract_text_from_image, match_rules, load_rules
+from message_sender import send_message
 from humanizer import wait_random
-from interaction_manager import setup_history_folders, log_interaction, has_interacted, save_new_match_dump
-from find_and_tap_button import (
-    take_ui_dump,
-    extract_profile_name,
-    find_and_tap_skip_button,
-    extract_prompts_from_dump,
-    find_all_prompts_and_likes_with_scrolling
-)
-# from gpt_generator import generate_gpt_message # Your other imports
-# from message_sender import send_message
+from gpt_generator import generate_gpt_message
+import logging
+import os
+import xml.etree.ElementTree as ElementTree
+from PIL import Image
+import numpy as np
+import yaml
+
+with open("config.yaml") as f:
+    CONFIG = yaml.safe_load(f)
+
+rules = CONFIG.get("rules", [])
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
 def run_bot():
-    logging.info("--- Starting new bot cycle ---")
+    logging.info('Creating a new session for the bot...................................................................')
+    screen_to_top()
+    # scroll and capture the screen into a single image
+    screenshot_list = capture_full_page_screenshots(
+        output_prefix='full_page',
+        max_scrolls=7,
+        scroll_delay=2.0
+    )
 
-    # 1. Take an initial UI dump to identify the profile
-    # initial_dump_path = take_ui_dump()
-    # if not initial_dump_path:
-    #     logging.error("Could not get UI dump. Aborting cycle.")
-    #     return
+    print("Screenshots captured:")
+    for screenshot in screenshot_list:
+        print(f"- {screenshot}")
 
-    # # 2. Extract profile name to check against history
-    # profile_name = extract_profile_name(initial_dump_path)
-    # if not profile_name:
-    #     logging.warning("Could not identify profile name. Skipping to next profile.")
-    #     find_and_tap_skip_button()
-    #     return
+    stitched_file = stitch_screenshots(screenshot_list, 'complete_page.png')
 
-    # # 3. Check if we have already interacted with this person
-    # if has_interacted(profile_name):
-    #     logging.info(f"Already interacted with '{profile_name}'. Skipping.")
-    #     find_and_tap_skip_button()
-    #     return
+    # now extract all the prompt data from this -> using ocr
+    logging.info('Extracting bio text from image...')
+    bio_text = extract_text_from_image(stitched_file)
+    logging.info(f'Extracted bio text: {bio_text}')
+    message = None
 
-    # 4. --- NEW MATCH FOUND ---
-    # This is a new profile, so we "do something": log it and save the dump for review.
-    # logging.info(f"✨ New profile found: '{profile_name}'. Starting interaction. ✨")
-    # dump_path = save_new_match_dump(profile_name, initial_dump_path)
+    # now we have all the data, generate prompt from the text extract
+    if CONFIG["gpt"]["enabled"]:
+        logging.info('Generating message using GPT...')
+        message = generate_gpt_message(bio_text)
+        logging.info(f'GPT message: {message}')
 
-    # 5. Proceed with the full scan and interaction logic
-    all_prompts = find_all_prompts_and_likes_with_scrolling()
-    logging.info(f"all promts {all_prompts}")
+    # Finalize the best prompt to answer from the list of prompts
+    if not message:
+        logging.info('Trying to match rules...')
+        message = match_rules(bio_text, rules)
+        logging.info(f'Rule-based message: {message}')
 
-    # if not all_prompts:
-    #     logging.info("No actionable prompts found on profile. Skipping.")
-    #     find_and_tap_skip_button()
-    #     return
+    if message:
+        logging.info(f"[REQ FOUND] Sending message: {message}")
+        wait_random(2, 4)
+        screen_to_top()
+        # First find and click the reply button, passing the bio text to match
+        success, button_coords = find_and_interact_with_buttons(message)
+        if success and button_coords:
+            # Wait for input field to be ready
+            wait_random(1, 2)
+            # Send the message
+            send_message(message=message)
+        else:
+            logging.warning("Could not find matching reply button. Skipping message send.")
+    else:
+        logging.info('No suitable message found. Skipping.')
 
-    # # --- Your logic to decide what to do ---
-    # # For example, like the first prompt and send a pre-defined message.
-    # # Replace this with your call to GPT or other rule-based logic.
-    # prompt_to_like = all_prompts[0]
-    # message_to_send = f"Hey {profile_name}! Great answer to '{prompt_to_like['prompt_text'].split('|')[0].strip()}'"
-
-    # logging.info(f"Decision: Liking prompt and sending message: '{message_to_send}'")
-
-    # # 6. Execute the action: Tap Like, wait, and send message
-    # x, y = prompt_to_like['like_coords']
-    # tap_screen(x, y)
-    
-    # wait_random(3, 5) # Wait for message composer to appear
-
-    # # send_message(x_coord_of_textbox, y_coord_of_textbox, message_to_send)
-    # # message_sent_successfully = ... # Your send_message function should return True/False
-    # message_sent_successfully = True # Placeholder for success
-
-    # # 7. Log the interaction upon success
-    # if message_sent_successfully:
-    #     log_interaction(profile_name)
-    # else:
-    #     logging.warning(f"Failed to send a message to '{profile_name}'. Will not log as interacted.")
-
+    # Clean up temporary files
+    for screenshot in screenshot_list:
+        try:
+            os.remove(screenshot)
+        except:
+            pass
+    try:
+        os.remove(stitched_file)
+    except:
+        pass
 
 if __name__ == "__main__":
     # Ensure all necessary folders exist before starting the loop
-    setup_history_folders()
     
     logging.info("Bot starting up. Press Ctrl+C to stop.")
     while True:
