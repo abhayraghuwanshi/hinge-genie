@@ -19,7 +19,7 @@ rules = CONFIG.get("rules", [])
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
 def run_bot():
-    logging.info('Capturing screen...')
+    logging.info('Creating a new session for the bot...................................................................')
     screen_to_top()
     # scroll and capture the screen into a single image
     screenshot_list = capture_full_page_screenshots(
@@ -59,11 +59,10 @@ def run_bot():
         # First find and click the reply button, passing the bio text to match
         success, button_coords = find_and_interact_with_buttons(message)
         if success and button_coords:
-            x, y = button_coords
             # Wait for input field to be ready
             wait_random(1, 2)
             # Send the message
-            send_message(x=x, y=y, message=message)
+            send_message(message=message)
         else:
             logging.warning("Could not find matching reply button. Skipping message send.")
     else:

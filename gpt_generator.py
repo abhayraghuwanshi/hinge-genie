@@ -18,10 +18,12 @@ def generate_gpt_message(bio_text):
 
     logging.info('Generating message using Ollama...')
 
+
     prompt = (
-        f"You are a {CONFIG['gpt']['personality']} person trying to message someone on Hinge.\n"
-        f"Their bio is:\n\"{bio_text}\"\n"
-        f"Write a {CONFIG['gpt']['style']} opener that sounds natural, not generic."
+        "You are a {CONFIG['gpt']['personality']} person messaging someone on Hinge.\n"
+        "Their bio is: \"{bio_text}\"\n"
+        "Based on their interests and personality, write a {CONFIG['gpt']['style']} opening message that is natural, specific, and engaging, using only letters, numbers, and spaces, no emojis or special characters, and exactly 100 characters or fewer.\n"
+        "Consider they are {CONFIG['gpt']['target_age']} years old and seeking a {CONFIG['gpt']['target_relationship']} relationship."
     )
 
     try:
