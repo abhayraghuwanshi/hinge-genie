@@ -3,7 +3,7 @@ import subprocess
 import time
 from xml.etree import ElementTree
 import logging
-from interaction_manager import save_dump_to_history
+from utils.interaction_manager import save_dump_to_history
 import os
 # Configuration
 DUMP_FILE = "ui.xml"

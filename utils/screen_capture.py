@@ -104,12 +104,20 @@ def stitch_screenshots(screenshot_files, output_path='stitched_image.png', overl
             logging.error("No screenshots to stitch")
             return None
 
+        # Verify all files exist
+        for file in screenshot_files:
+            if not os.path.exists(file):
+                logging.error(f"Screenshot file not found: {file}")
+                return None
+
         # Open first image to get dimensions
         first_img = Image.open(screenshot_files[0])
         img_width, img_height = first_img.size
+        logging.info(f"First image dimensions: {img_width}x{img_height}")
 
         # Calculate total height (subtract overlap for each join)
         total_height = img_height + (img_height - overlap_pixels) * (len(screenshot_files) - 1)
+        logging.info(f"Creating stitched image with dimensions: {img_width}x{total_height}")
 
         # Create new image
         stitched_img = Image.new('RGB', (img_width, total_height))
@@ -117,6 +125,7 @@ def stitch_screenshots(screenshot_files, output_path='stitched_image.png', overl
         # Paste images
         y_offset = 0
         for i, screenshot_file in enumerate(screenshot_files):
+            logging.info(f"Processing screenshot {i+1}/{len(screenshot_files)}: {screenshot_file}")
             img = Image.open(screenshot_file)
             stitched_img.paste(img, (0, y_offset))
             if i < len(screenshot_files) - 1:  # Don't add overlap after last image
@@ -130,7 +139,7 @@ def stitch_screenshots(screenshot_files, output_path='stitched_image.png', overl
         logging.error("PIL (Pillow) not installed. Install with: pip install Pillow")
         return None
     except Exception as e:
-        logging.error(f"Error stitching images: {e}")
+        logging.error(f"Error stitching images: {str(e)}")
         return None
 
 def screen_to_top():

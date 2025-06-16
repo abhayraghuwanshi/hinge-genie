@@ -1,3 +1,4 @@
+from utils.find_and_tap_button import find_and_tap_skip_button
 from utils.find_button_corrdinates import find_and_interact_with_buttons
 from utils.screen_capture import capture_full_page_screenshots, screen_to_top, stitch_screenshots
 from utils.bio_parser import extract_text_from_image, match_rules, load_rules
@@ -26,7 +27,7 @@ def run_bot():
     screenshot_list = capture_full_page_screenshots(
         output_prefix='full_page',
         max_scrolls=7,
-        scroll_delay=2.0
+        scroll_delay=1.0
     )
 
     print("Screenshots captured:")
@@ -34,6 +35,15 @@ def run_bot():
         print(f"- {screenshot}")
 
     stitched_file = stitch_screenshots(screenshot_list, 'complete_page.png')
+    if not stitched_file:
+        logging.error("Failed to stitch screenshots. Cleaning up and skipping this iteration.")
+        # Clean up temporary files
+        for screenshot in screenshot_list:
+            try:
+                os.remove(screenshot)
+            except:
+                pass
+        return
 
     # now extract all the prompt data from this -> using ocr
     logging.info('Extracting bio text from image...')
@@ -52,7 +62,7 @@ def run_bot():
         logging.info('Trying to match rules...')
         message = match_rules(bio_text, rules)
         logging.info(f'Rule-based message: {message}')
-
+    messageSent = False
     if message:
         logging.info(f"[REQ FOUND] Sending message: {message}")
         wait_random(2, 4)
@@ -63,14 +73,16 @@ def run_bot():
             # Wait for input field to be ready
             wait_random(1, 2)
             # Send the message
-            send_message(message=message)
+            messageSent= send_message(message=message)
             # Save profile and message to history
             save_profile_and_message(stitched_file, message)
         else:
+            
             logging.warning("Could not find matching reply button. Skipping message send.")
     else:
         logging.info('No suitable message found. Skipping.')
-
+    if not messageSent:
+        find_and_tap_skip_button()
     # Clean up temporary files
     for screenshot in screenshot_list:
         try:
@@ -87,5 +99,5 @@ if __name__ == "__main__":
     logging.info("Bot starting up. Press Ctrl+C to stop.")
     while True:
         run_bot()
-        wait_duration = wait_random(60, 90)
+        wait_duration = wait_random(20, 30)
         logging.info(f"--- Cycle complete. Waiting for {wait_duration} seconds. ---")

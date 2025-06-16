@@ -58,15 +58,34 @@ def generate_gpt_message(bio_text):
     logging.info('Generating message using Ollama...')
 
 
-    prompt = (
-        "You are a {CONFIG['gpt']['personality']} person messaging someone on Hinge.\n"
-        "Their bio is: \"{bio_text}\"\n"
-        "Based on their interests and personality, write a {CONFIG['gpt']['style']} opening message that is natural, specific, and engaging, using only letters, numbers, and spaces, no emojis or special characters, and exactly 100 characters or fewer.\n"
-        "Consider they are {CONFIG['gpt']['target_age']} years old and seeking a {CONFIG['gpt']['target_relationship']} relationship."
-        f"Here are some example openers:\n{examples}\n\n"
-        f"Pick the best line from the list above, OR write a new one in the same style.\n"
-        f"Only respond with the final message to send."
-    )
+    prompt = f"""
+    You're a {CONFIG['gpt']['personality']} person trying to send a fun first message on Hinge.
+
+    Their bio: "{bio_text}"
+    They are {CONFIG['gpt']['target_age']} and looking for a {CONFIG['gpt']['target_relationship']} relationship.
+
+    Use this style: {CONFIG['gpt']['style']}
+
+    Write a clever and specific opener based on their profile. The message should:
+    - Be playful, witty, and slightly flirty
+    - Feel confident and casual (not serious or overly emotional)
+    - Be under 100 characters
+    - Use only letters, numbers, and spaces (no emojis or special characters)
+
+    Here are some example openers:
+    {examples}
+
+    Pick one from the list if it fits, or write a new one in the same tone.
+
+    ❗ Important:
+    - Do NOT use phrases like "we’d be that couple", "soulmate", "spiritual", "romantic journey", or anything cringey
+    - Avoid sounding overly serious, sentimental, or dreamy
+    - Avoid anything about marriage, fate, or long-term compatibility
+    - Just return the final message only — no quotes, no lists, no intro
+    """
+
+  
+
 
     try:
         res = requests.post(

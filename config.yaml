@@ -3,8 +3,8 @@ gpt:
   enabled: true
   target_age: 23-26
   target_relationship: "Short to long"
-  style: "playful"
-  personality: "outgoing and adventurous"
+  style: "playful and little flirty and romance "
+  personality: "funny, outgoing and adventurous"
   openai_api_key: ""
 rules: []
 
