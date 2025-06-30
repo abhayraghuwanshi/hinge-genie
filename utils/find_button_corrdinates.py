@@ -178,11 +178,13 @@ def find_and_interact_with_buttons(message=None):
             # Take a new screenshot after each scroll
             if scroll_count > 0:
                 scroll_screen()
+                wait_random(1, 1.5)
             current_screenshot = f'scroll_check_{scroll_count}.png'
             take_screenshot(current_screenshot)
             # Dump and pull UI XML
             os.system('adb shell uiautomator dump /sdcard/ui.xml')
             os.system('adb pull /sdcard/ui.xml ui_dump.xml')
+            wait_random(1, 1.5)
             # Get button coordinates from UI dump
             button_coords = get_button_coordinates_from_ui_dump('ui_dump.xml',  button_class="android.widget.Button", content_desc="Like")
             screenshot = Image.open(current_screenshot)

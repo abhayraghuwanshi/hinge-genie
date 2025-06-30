@@ -5,39 +5,7 @@ import json
 
 
 # my lines
-curated_lines = [
-    "I don't do ‘plans,' BoJack. I do vibes.",
-    "If we match, I call dibs on being the little spoon at least twice a week.",
-    "You seem like trouble… I like it",
-    "What's your go-to red flag? I need to know what I'm ignoring.",
-    "I'd offer a cheesy pickup line, but honestly, your pics are distracting me",
-    "Would it be too forward to ask you what we're doing on our third date?",
-    "What kind of trouble are we starting this week?",
-    "You look like you'd ruin my life in the best way possible. Shall we begin?",
-    "I'd offer a cheesy pickup line, but honestly, your shoes are distracting me",
-    "You look like you'd ghost me… but like, really politely.",
-    "If we were both fries, you'd be the one I save for last. Just sayin'",
-    "What's your spirit animal and why is it probably a raccoon in a leather jacket?",
-    "You look like you give amazing advice and terrible life choices. Prove me right or disappoint me.",
-    "You seem like the type who's either amazing at parallel parking or absolutely terrible. No in-between. Which is it?",
-    "If we dated, I feel like you'd win 80% of our fake arguments. I'm okay with that.",
-    "You seem like someone who'd casually ruin me emotionally… but in a hot way.",
-    "What's your villain origin story? You definitely have one.",
-    "Real question: do you look this cool or are you actually this cool?",
-    "You'd be the hot girl in a heist movie who double-crosses everyone. I respect it",
-    "Are you into guys who open with clever texts or the ones who make you question your life choices? I can do either",
-    "I feel like dating you comes with terms and conditions. And I don't read fine print.",
-    "You're probably a walking green flag with a red flag hobby. I'm intrigued.",
-    "Are you the reason for my trust issues? Or the cure? Let's find out.",
-    "You give off “I'll ruin your routine in the best way” energy.",
-    "I feel like we'd be that couple people either ship hard or fear deeply. No middle ground.",
-    "If emotional damage was a love language, I think we'd be fluent.",
-    "You seem like the kind of person I'd make bad decisions with… and still blame astrology.",
-    "If we matched in a new city, I'd say it was fate. If we matched here, I'd say it's time to book flights.",
-    "You give off “takes spontaneous trips and makes questionable choices at the airport bar” energy. I respect it.",
-    "Are you the algorithm? Because you're showing me things I didn't know I needed.",
-    "You look like you'd understand my meme references and still judge me. Ideal"
-]
+curated_lines = []
 
 
 
@@ -59,38 +27,79 @@ def generate_gpt_message(bio_text):
 
 
     prompt = f"""
-    You're a {CONFIG['gpt']['personality']} person trying to send a fun first message on Hinge.
+    You're a {CONFIG['gpt']['personality']} person trying to send a fun and flirty first message on Hinge.
 
     Their bio: "{bio_text}"
     They are {CONFIG['gpt']['target_age']} and looking for a {CONFIG['gpt']['target_relationship']} relationship.
 
-    Use this style: {CONFIG['gpt']['style']}
+    If their name is mentioned, feel free to make a funny or clever pun using it — as long as it's light, playful, and not forced.
 
-    Write a clever and specific opener based on their profile. The message should:
-    - Be playful, witty, and slightly flirty
-    - Feel confident and casual (not serious or overly emotional)
-    - Be under 100 characters
-    - Use only letters, numbers, and spaces (no emojis or special characters)
+    Write a clever and specific opener that:
+    - Feels confident, human, and personal
+    - Is flirty, playful, and optionally a little sarcastic
+    - Uses only letters, numbers, and spaces
+    - Is under 100 characters
 
-    Here are some example openers:
+    Here are some examples of the tone to aim for, you can also create similar lines
     {examples}
 
-    Pick one from the list if it fits, or write a new one in the same tone.
-
     ❗ Important:
-    - Do NOT use phrases like "we’d be that couple", "soulmate", "spiritual", "romantic journey", or anything cringey
-    - Avoid sounding overly serious, sentimental, or dreamy
-    - Avoid anything about marriage, fate, or long-term compatibility
-    - Just return the final message only — no quotes, no lists, no intro
+    - Do NOT include lines like “we'd be that couple,” “soulmate,” “romantic journey,” or “decode each other's signs”
+    - Avoid anything dreamy, overly deep, or sentimental
+    - Avoid emojis, quotes, lists, or explanations
+    - Allowed characters: A-Z, a-z, and SPACE only.
+    - Only return the final message line to send
+    - Avoid generic flattery (e.g., “you look amazing”)
+    - Do not reference age, religion, or city
+    - Do not include hashtags or greetings like “Hi” or “Hello”
+    - Do not use dramatic phrasing like “emotional damage,” “ruin me,” “soulmate,” or “hot mess energy”
+    - Avoid vague romantic clichés. Keep it fresh and specific.
+    - Do NOT copy any example exactly unless it perfectly matches the prompt.
+    - do not make plane
+    - no lines regarding spirit animals, zodiac signs, or astrology
+    - Do NOT suggest plans or shared activities, just a fun opener
+    - donot start with "If we matched," or similar phrases that imply a match is already made
+
+    Before returing the final Recheck the message and see if it is good and follow above instruction
+
+    Return only the final message. 
     """
 
-  
+    # prompt = f"""
+    # You’re a {CONFIG['gpt']['personality']} person crafting a fun, flirty Hinge opener.
+    # Their bio: "{bio_text}"
+    # Write a clever, playful message:
+    # - Confident, personal, and a bit sarcastic
+    # - Under 100 characters
+    # - Only letters, numbers, and spaces
+    # Examples: {examples}
+    # Return only the final message.
+    # """
 
+    # prompt = f"""
+    # You’re crafting a flirty Hinge opener. Their bio: "Loves night vibes and spontaneous adventures."
+    # Write a clever, playful message under 100 characters using only letters, numbers, and spaces.
+    # Absolutely NO emojis, punctuation, or special characters.
+    # Their bio: "{bio_text}"
+    # Absolutely NO emojis, punctuation, or special characters.
+    # Do NOT suggest plans or shared activities.
+    # Return only the final message.
+    # """
+
+    # prompt = f"""
+    # You’re a witty, flirty person crafting a Hinge opener.
+    # Their bio: "{bio_text}"
+    # Write a playful message under 100 characters using ONLY letters, numbers, and spaces.
+    # NO emojis, punctuation, or special characters. NO plans or shared activities.
+    # Examples: {examples}
+    # Return only the final message.
+    # """
 
     try:
         res = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": CONFIG['gpt'].get("model", "mistral"), "prompt": prompt},
+            json={"model": CONFIG['gpt'].get("model", "llama3.1:8b-instruct-q4_0"), "prompt": prompt, "temperature": 0.1,  
+            "max_tokens": 30 },
             stream=True
         )
         res.raise_for_status()
@@ -109,7 +118,7 @@ def generate_gpt_message(bio_text):
         return None
 
 
-def is_message_suitable(prompt_text, message, model="mistral"):
+def is_message_suitable(prompt_text, message, model="llama3.1:8b-instruct-q4_0"):
     """Ask Ollama if the message is a good reply to the prompt text."""
     system_prompt = (
         f'Prompt: "{prompt_text.strip()}"\n'

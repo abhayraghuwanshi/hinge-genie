@@ -1,15 +1,19 @@
 gpt:
-  model: "mistral"
   enabled: true
   target_age: 23-26
   target_relationship: "Short to long"
   style: "playful and little flirty and romance "
-  personality: "funny, outgoing and adventurous"
+  personality: "witty and charming"
+  model: mistral:latest
   openai_api_key: ""
-rules: []
+  temperature: 0.44
+
+
+max_retries: 3
+ollama_api_url: "http://localhost:11434/api/generate"
 
 delays:
   min_typing_delay: 0.08
   max_typing_delay: 0.20
   min_message_wait: 3
-  max_message_wait: 7
+  max_message_wait: 7S
