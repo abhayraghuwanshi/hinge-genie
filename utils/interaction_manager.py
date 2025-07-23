@@ -79,9 +79,11 @@ def save_profile_and_message(profile_image_path, message):
         logging.error(f"Failed to save message: {e}")
 
 def save_prompt_and_response(prompt, response):
-    """Saves the prompt and the generated response to history/promtresponse with timestamp."""
+    """Saves the prompt and the generated response to history/prompt-response with timestamp."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_path = os.path.join("history/prompt_response", f"prompt_response_{timestamp}.txt")
+    directory = "history/prompt-response"
+    os.makedirs(directory, exist_ok=True)
+    file_path = os.path.join(directory, f"prompt_response_{timestamp}.txt")
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(f"Prompt:\n{prompt}\n\nResponse:\n{response}\n")

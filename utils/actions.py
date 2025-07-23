@@ -15,6 +15,7 @@ from xml.etree import ElementTree
 import logging
 import os
 import random
+from utils.interaction_manager import save_dump_to_history
 
 
 # Configuration

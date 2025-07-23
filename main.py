@@ -3,6 +3,7 @@ import os
 import yaml
 from utils.actions import find_and_interact_with_like_buttons, find_and_tap_skip_button, \
     click_on_like_button_type_and_send_message, scroll_to_top, wait_random, scroll_and_save_ui_dumps
+
 from utils.interaction_manager import setup_history_folders, save_prompt_and_response
 from utils.llm import llm  
 
@@ -31,14 +32,18 @@ def run_bot():
     logging.info(prompts)
 
     gpt_prompt = (
-        "You are an expert at writing witty, charming, and authentic responses to Hinge profile prompts. "
+        "You are an expert at writing witty and charming responses for Hinge, but your main goal is to sound authentic and easy to talk to. "
         "Given the following prompts from a user's profile, generate a single, engaging reply that increases the chances of a match. "
+        
+        # NEW INSTRUCTION FOR SIMPLICITY
+        "Use simple, common English words and a conversational tone, as if you were texting a friend. Avoid complex vocabulary or formal phrasing. "
+        
         "Your tone should be inquisitive and playful. "
         "Do not generalize specific details like decades or niche interests. "
         "Crucially, your response must end with an open-ended question to make it easy to reply. "
         "Be concise and avoid clichés. Do not use any emojis. Your response must be a maximum of 140 characters.\n\n"
         f"Profile Prompts:\n{prompts}\n\n"
-        "Your Response (max 140 chars, must end with a question, no emoji):"
+        "Your Response (max 140 chars, simple English, must end with a question, no emoji):"
     )
 
     try:
@@ -48,7 +53,9 @@ def run_bot():
         message = None
 
     if message:
-        logging.info(f"Generated message: {message}")
+        logging.info("\n" + "*" * 60)
+        logging.info(f"GENERATED MESSAGE: {message}")
+        logging.info("*" * 60 + "\n")
 
     messageSent = False
     if message:
