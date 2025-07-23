@@ -4,9 +4,9 @@ gpt:
   target_relationship: "Short to long"
   style: "playful and little flirty and romance "
   personality: "witty and charming"
-  model: mistral:latest
+  model: llama3.1:8b-instruct-q2_k
   openai_api_key: ""
-  temperature: 0.44
+  temperature: 0.3
 
 
 max_retries: 3
