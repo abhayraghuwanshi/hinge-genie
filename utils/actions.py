@@ -2,11 +2,6 @@ import os
 import time
 import logging
 import xml.etree.ElementTree as ET
-import hashlib
-import numpy as np
-import cv2
-from PIL import Image
-import pytesseract
 import xml.etree.ElementTree as ET
 import re
 import subprocess

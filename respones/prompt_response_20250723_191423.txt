@@ -1,0 +1,10 @@
+Prompt:
+I know the best spot in town for: Sushi
+I know the best spot in town for: Sushi
+Typical Sunday: Hanging out with friends
+Typical Sunday: Hanging out with friends
+I hype myself up by: Shopping
+
+Response:
+Sushi and shopping? Sounds like a fun combo! What's your go-to order when you hit that sushi spot?
+
