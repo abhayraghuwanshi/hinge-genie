@@ -1,0 +1,9 @@
+Prompt:
+I know the best spot in town for: Cold coffee
+I know the best spot in town for: Cold coffee
+I won't shut up about: Myself
+I won't shut up about: Myself
+
+Response:
+Cold coffee is my weakness! Spill the beans, what makes this spot so good? And, hey, what's the most interesting thing about *you*?
+

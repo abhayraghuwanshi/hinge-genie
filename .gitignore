@@ -1,3 +1,14 @@
 __pycache__
 .venv
+.env
+
+# History and logs
 history/
+*.log
+
+# UI dumps
+ui.xml
+ui_dump.xml
+
+# Temporary files
+*.tmp

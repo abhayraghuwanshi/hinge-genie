@@ -3,7 +3,6 @@ import time
 import logging
 import re
 import xml.etree.ElementTree as ET
-from utils.humanizer import wait_random
 
 def parse_bounds(bounds):
     left_top, right_bottom = bounds.split("][")
@@ -116,9 +115,4 @@ def send_message(message):
             return False
         else:
             logging.error("Cancel button not found.")
-            return False
-
-# if __name__ == "__main__":
-#     while True:
-#         send_message("Hello you look like you will ruin my life in the best way possible")
-#         wait_random(15, 30)
+            return Fals

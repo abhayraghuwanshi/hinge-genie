@@ -1,0 +1,16 @@
+# Core dependencies for hinge-genie
+python-dotenv
+crewai
+litellm
+PyYAML
+
+# For XML parsing (UI hierarchy extraction)
+lxml
+
+# For logging (standard library, but some setups use loguru)
+# loguru  # Uncomment if you use advanced logging
+
+# If you use Google Gemini, OpenAI, or Anthropic APIs directly, add their SDKs below
+# google-generativeai
+# openai
+# anthropic

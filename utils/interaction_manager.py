@@ -77,3 +77,16 @@ def save_profile_and_message(profile_image_path, message):
         logging.info(f"Saved message to {message_history_path}")
     except IOError as e:
         logging.error(f"Failed to save message: {e}")
+
+def save_prompt_and_response(prompt, response):
+    """Saves the prompt and the generated response to history/prompt-response with timestamp."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    directory = "history/prompt-response"
+    os.makedirs(directory, exist_ok=True)
+    file_path = os.path.join(directory, f"prompt_response_{timestamp}.txt")
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"Prompt:\n{prompt}\n\nResponse:\n{response}\n")
+        logging.info(f"Saved prompt and response to {file_path}")
+    except IOError as e:
+        logging.error(f"Failed to save prompt and response: {e}")
