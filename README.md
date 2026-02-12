@@ -1,198 +1,203 @@
-# HingeGenie 🧞‍♂️
+# HingeGenie
 
-Smart, human-like auto-messaging bot for Hinge using UI XML extraction + GPT-4.
+Smart, human-like auto-messaging bot for Hinge using UI XML extraction + Gemini AI.
 
-## 🧠 Features
+## Features
 
-- Auto-detects bio and profile data from Android UI hierarchy (XML)
-- Sends flirty, friendly messages via ADB or emulator
-- Supports GPT-4 message generation
-- Human-like typing with delays, cursor movement
-- Fully configurable via `config.yaml`
+- **UI XML Extraction**: Extracts profile data directly from Android UI hierarchy - no OCR needed
+- **AI-Powered Responses**: Generates witty, personalized messages using Google Gemini 2.0 Flash
+- **Human-Like Behavior**: Realistic typing delays, natural scrolling, and randomized timing
+- **History Tracking**: Logs all interactions to prevent duplicate messages
+- **Fully Configurable**: Customize tone, delays, and response style via `config.yaml`
 
-## 📜 Implementation History
+## How It Works
 
-**Current Method (Recommended): UI XML Extraction**
-- Uses `adb shell uiautomator dump` to get the UI hierarchy as XML
-- Directly parses text content from UI elements
-- More reliable, faster, and doesn't require Tesseract OCR
-- No dependency on screen resolution or image quality
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Android Device │────▶│   UI XML Dump    │────▶│ Parse Profiles  │
+│  (via ADB)      │     │  (uiautomator)   │     │  & Prompts      │
+└─────────────────┘     └──────────────────┘     └────────┬────────┘
+                                                          │
+┌─────────────────┐     ┌──────────────────┐     ┌────────▼────────┐
+│  Send Message   │◀────│  Type with       │◀────│  Gemini AI      │
+│  & Log          │     │  Human Delays    │     │  Response Gen   │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+```
 
-**Legacy Method: OCR-based Extraction**
-- Previously used screenshot + Tesseract OCR to extract text
-- Required additional system dependencies (Tesseract)
-- Prone to OCR accuracy issues with different fonts/backgrounds
-- See "Legacy OCR Setup" section below if you prefer this method
+1. **Capture**: Scrolls through Hinge and dumps UI hierarchy as XML
+2. **Extract**: Parses XML to find profile prompts and answers
+3. **Generate**: Sends context to Gemini AI for a personalized response
+4. **Deliver**: Types and sends the message with human-like behavior
+5. **Track**: Logs the interaction to prevent duplicates
 
-## 🛠️ Local Development Setup
+## Prerequisites
 
-### Prerequisites
+- Python 3.10+
+- ADB (Android Debug Bridge)
+- Google Gemini API key
 
-1. Python 3.10 or higher
-2. ADB (Android Debug Bridge) installed and configured
-   - For Windows: Download from [Android Platform Tools](https://developer.android.com/studio/releases/platform-tools)
-   - For Linux: `sudo apt-get install adb`
-   - For macOS: `brew install android-platform-tools`
+### Installing ADB
 
-### ADB Setup
+| Platform | Command |
+|----------|---------|
+| Windows  | Download from [Android Platform Tools](https://developer.android.com/studio/releases/platform-tools) |
+| Linux    | `sudo apt-get install adb` |
+| macOS    | `brew install android-platform-tools` |
 
-1. Enable Developer Options on your Android device:
-   - Go to Settings > About Phone
-   - Tap "Build Number" 7 times to enable Developer Options
-2. Enable USB Debugging in Developer Options
-3. Connect your device via USB and run:
+### Setting Up Your Android Device
+
+1. Go to **Settings > About Phone**
+2. Tap **Build Number** 7 times to enable Developer Options
+3. Go to **Developer Options** and enable **USB Debugging**
+4. Connect your device via USB
+5. Verify connection:
    ```bash
    adb devices
    ```
-   You should see your device listed
 
-### Installation
+## Installation
 
-1. Clone the repository:
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/hinge-genie.git
+   git clone https://github.com/abhayraghuwanshi/hinge-genie.git
    cd hinge-genie
    ```
 
-2. Create and activate a virtual environment:
+2. **Create virtual environment**
    ```bash
    python -m venv venv
-   # On Windows
+
+   # Windows
    .\venv\Scripts\activate
-   # On Linux/macOS
+
+   # Linux/macOS
    source venv/bin/activate
    ```
 
-3. Install dependencies:
+3. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. (Optional) Install Tesseract OCR if using legacy OCR method:
-   - Windows: Download installer from [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
-   - Linux: `sudo apt-get install tesseract-ocr`
-   - macOS: `brew install tesseract`
-   - **Note**: Not required for the default XML-based extraction method
+4. **Configure environment**
 
-### Running Locally
+   Create a `.env` file in the project root:
+   ```
+   GEMINI_API_KEY=your_api_key_here
+   ```
 
-1. Ensure your Android device is connected and ADB is working
-2. Run the main script:
+## Usage
+
+1. Connect your Android device with Hinge open
+2. Run the bot:
    ```bash
    python main.py
    ```
 
-## 📋 Logs and History
+The bot will continuously:
+- Scroll through profiles
+- Extract prompt-answer pairs
+- Generate personalized responses
+- Send messages with natural timing
 
-The bot automatically creates and manages several directories to track its activity:
+Press `Ctrl+C` to stop.
 
-### Directory Structure
+## Configuration
+
+Edit `config.yaml` to customize behavior:
+
+```yaml
+gpt:
+  enabled: true
+  target_age: 23-26
+  target_relationship: "Short to long"
+  style: "playful and flirty"
+  personality: "witty and charming"
+  temperature: 0.3
+
+delays:
+  min_typing_delay: 0.08      # Seconds between keystrokes
+  max_typing_delay: 0.20
+  min_message_wait: 3         # Seconds before sending
+  max_message_wait: 7
+
+max_retries: 3
+```
+
+## Project Structure
 
 ```
-history/
-├── dumps/               # UI XML dumps with timestamps
-├── new_matches/         # UI dumps of new matches
-├── profiles/            # Profile images (if saved)
-├── messages/            # Sent messages (if saved)
-├── prompt-response/     # GPT prompts and generated responses
-├── tmp/                 # Temporary UI dumps during scrolling
-├── interactions.log     # Log of all profile interactions
-└── allPromts.txt        # Extracted profile prompts
+hinge-genie/
+├── main.py                 # Entry point - main bot loop
+├── config.yaml             # Bot configuration
+├── requirements.txt        # Python dependencies
+├── .env                    # API keys (create this)
+├── utils/
+│   ├── actions.py          # ADB interactions (tap, scroll, UI dumps)
+│   ├── llm.py              # Gemini AI integration
+│   ├── prompt_extractor.py # Extract prompts from UI XML
+│   ├── interaction_manager.py  # History and file management
+│   └── message_sender.py   # Message typing and sending
+└── history/
+    ├── dumps/              # UI XML snapshots
+    ├── tmp/                # Temporary dumps during scrolling
+    ├── prompt-response/    # Generated prompts and responses
+    └── interactions.log    # Interaction history
 ```
 
-### Files Created During Runtime
+## Logs & History
 
-**Console Logs:**
-- Real-time logging output to console with timestamps
-- Format: `[YYYY-MM-DD HH:MM:SS] LEVEL: message`
-- Logs all bot actions: scrolling, tapping, message generation, etc.
+The bot creates several files to track activity:
 
-**UI Dumps (`history/dumps/`):**
-- Timestamped XML snapshots: `dump_YYYYMMDD_HHMMSS.xml`
-- Contains the complete Android UI hierarchy at time of capture
-- Used for debugging and understanding app state
+| Location | Purpose |
+|----------|---------|
+| `history/dumps/` | Timestamped UI XML snapshots |
+| `history/prompt-response/` | AI prompts and generated responses |
+| `history/interactions.log` | Profiles already contacted |
+| `ui.xml` | Latest UI hierarchy dump |
 
-**Temporary Dumps (`history/tmp/`):**
-- Sequential dumps during profile scrolling: `dump_1.xml`, `dump_2.xml`, etc.
-- Cleared and regenerated each session
-- Used to extract all profile prompts from multiple screens
+## Technical Details
 
-**Prompt-Response Pairs (`history/prompt-response/`):**
-- Timestamped files: `prompt_response_YYYYMMDD_HHMMSS.txt`
-- Contains the extracted profile prompts and GPT-generated message
-- Useful for reviewing bot performance and message quality
+### Why XML over OCR?
 
-**Interaction Log (`history/interactions.log`):**
-- Simple text file tracking which profiles have been contacted
-- Prevents duplicate messages to the same profile
-- One profile name per line
+| Feature | XML Extraction | OCR |
+|---------|---------------|-----|
+| Accuracy | 100% | Variable |
+| Speed | Fast | Slow |
+| Dependencies | None | Tesseract |
+| Font/Theme | Any | Limited |
+| Reliability | High | Medium |
 
-**Root Directory:**
-- `ui.xml` - Latest UI hierarchy dump (overwritten each time)
-- `ui_dump.xml` - Working copy of UI dump for parsing
+### AI Response Guidelines
 
-## 🚀 Deployment with Docker
+The bot instructs Gemini to:
+- Keep responses under 140 characters
+- Use simple, conversational English
+- End with an open-ended question
+- Avoid emojis
+- Match a playful, flirty tone
 
-### Step 1: Build the Docker image
+## Troubleshooting
 
+**Device not detected**
 ```bash
-docker build -t hingegenie .
+adb kill-server
+adb start-server
+adb devices
 ```
 
-### Step 2: Run the container
+**Permission denied**
+- Ensure USB debugging is enabled
+- Accept the debugging prompt on your device
 
-```bash
-docker run -it --rm \
-  --device=/dev/kvm \
-  --privileged \
-  -v $PWD:/app \
-  hingegenie
-```
+**API errors**
+- Verify your Gemini API key in `.env`
+- Check your API quota
 
-> Note: You must run this on a system with ADB access or emulator. Docker container must have access to host ADB or device via port binding or volume mounting.
+## Disclaimer
 
-## 📦 Dockerfile (minimal)
+This tool is for educational and personal use only. Use responsibly and in accordance with Hinge's Terms of Service. Do not use for spam or automated mass messaging.
 
-```Dockerfile
-FROM python:3.10
+## License
 
-WORKDIR /app
-
-COPY . .
-
-RUN apt-get update && \
-    apt-get install -y adb && \
-    pip install -r requirements.txt
-
-# Note: tesseract-ocr not required for XML-based extraction
-# Add 'tesseract-ocr' to apt-get if using legacy OCR method
-
-CMD ["python", "main.py"]
-```
-
-## 📁 Config
-
-Edit `config.yaml` to change your GPT style or fallback rules.
-
-## 🔄 Legacy OCR Setup (Optional)
-
-If you prefer using the original OCR-based method instead of XML extraction:
-
-1. Install Tesseract OCR (see prerequisites above)
-2. Modify your code to use screenshot + OCR instead of XML parsing
-3. The OCR method captures a screenshot and uses pytesseract to extract text
-
-**Why XML is better:**
-- ✅ Faster extraction (no image processing needed)
-- ✅ 100% accuracy (reads actual UI text, not interpreted from pixels)
-- ✅ No additional dependencies (uses built-in Android uiautomator)
-- ✅ Works in all lighting conditions and with any font/theme
-
-**When to use OCR:**
-- If you need to extract text from images or non-standard UI elements
-- If the app obfuscates its UI hierarchy
-- For compatibility with older Android versions that don't support uiautomator
-
-## ⚠️ Ethical Note
-
-This tool is for educational/personal automation. Don't use to spam or break Hinge TOS.
+MIT
